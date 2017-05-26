@@ -1,7 +1,20 @@
-import numpy as np
 import dlib
+import numpy as np
 
-WORKING_DIRECTORY = '/home/malov/users/'
+
+WORKING_DIRECTORY           = '/home/malov/users/'
+FACE_SHAPE_PREDICT_MODEL    = '/home/malov/PycharmProjects/object_detection/shape_predictor_68_face_landmarks.dat'
+FACE_128_CHARS_MODEL        = '/home/malov/PycharmProjects/object_detection/dlib_face_recognition_resnet_model_v1.dat'
+CLASSIFIER_PATH             = '/home/malov/classifier.pkl'
+TRAINING_DATASET_CSV       = '/home/malov/PycharmProjects/FaceRecognition/training_set.csv'
+
+INNER_EYES_AND_BOTTOM_LIP   = [39, 42, 57]
+OUTER_EYES_AND_NOSE         = [36, 45, 33]
+
+FACE_DETECTOR               = dlib.get_frontal_face_detector()
+FACE_SHAPE_PREDICT          = dlib.shape_predictor(FACE_SHAPE_PREDICT_MODEL)
+FACE_128_CHARS_RECOGNIZE    = dlib.face_recognition_model_v1(FACE_128_CHARS_MODEL)
+
 
 TEMPLATE_INFO = np.float32([
     (0.0792396913815, 0.339223741112), (0.0829219487236, 0.456955367943),
@@ -39,23 +52,6 @@ TEMPLATE_INFO = np.float32([
     (0.672409137852, 0.744177032192), (0.572539621444, 0.776609286626),
     (0.5240106503, 0.783370783245), (0.477561227414, 0.778476346951)])
 
-FILES_PATH = {'eyes_nose_predictor' : '/home/malov/PycharmProjects/object_detection/shape_predictor_68_face_landmarks.dat',
-              'face_128_chars_recognizer_model' : '/home/malov/PycharmProjects/object_detection/dlib_face_recognition_resnet_model_v1.dat',
-              'people_name_list' : '/home/malov/lib/openface/generated-embeddings/labels.csv',
-              'face_128_chars' : '/home/malov/lib/openface/generated-embeddings/reps.csv',
-              'classifier_path' : '/home/malov/PycharmProjects/FaceRecognition/Classifier/classifier.pkl',
-              'face_detection' : '/home/malov/PycharmProjects/object_detection/cascade_face_detection.xml',
-              }
+TPL_MIN, TPL_MAX = np.min(TEMPLATE_INFO, axis=0), np.max(TEMPLATE_INFO, axis=0)
+MINMAX_TEMPLATE = (TEMPLATE_INFO - TPL_MIN) / (TPL_MAX - TPL_MIN)
 
-HUMAN_FACE_CONFIG = { 'TEMPLATE' : TEMPLATE_INFO,
-                      'TPL_MIN' : np.min(TEMPLATE_INFO),
-                      'TPL_MAX' : np.max(TEMPLATE_INFO),
-                      'MINMAX_TEMPLATE' : (TEMPLATE_INFO - np.min(TEMPLATE_INFO) / (np.max(TEMPLATE_INFO) - np.min(TEMPLATE_INFO))),
-                      'INNER_EYES_AND_BOTTOM_LIP' : [39, 42, 57],
-                      'OUTER_EYES_AND_NOSE' : [36, 45, 33]
-                    }
-
-HUMAN_PARAMS = {'face_detector' : dlib.get_frontal_face_detector(),
-                'eyes_nose_predictor' : dlib.shape_predictor(FILES_PATH['eyes_nose_predictor']),
-                'face_128_chars_recognizer' : dlib.face_recognition_model_v1(FILES_PATH['face_128_chars_recognizer_model'])
-                }
