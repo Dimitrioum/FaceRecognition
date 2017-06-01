@@ -5,13 +5,11 @@ inferring person and confidence of the prediction
 """
 
 import os
-import re
-import csv
 import cv2
 import numpy as np
 import pickle
+from ast import literal_eval
 from sklearn.preprocessing import LabelEncoder
-from sklearn.linear_model import LinearRegression
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -22,19 +20,6 @@ from sklearn.metrics import accuracy_score
 import pandas as pd
 
 
-def _get_row_string_from_csv(index, train_set):
-    """
-    :param index: index of the analysing photo
-    :type: index: int
-    :param train_set: training data set of 128 face chars
-    :type train_set: <class 'pandas.core.frame.DataFrame'>
-    :return: list of strings of 128 face chars of the analysing photo
-    """
-
-    list_of_strings = re.split('\[|,|\]', train_set.values[index][0])
-    return list_of_strings
-
-
 def _get_list_chars_from_string_csv(train_set):
     """
     :param train_set: training data set of 128 face chars
@@ -43,36 +28,49 @@ def _get_list_chars_from_string_csv(train_set):
     """
 
     faces_128_chars = []
-    for index in range(len(train_set.values)):
-        _chars_row_set = []
-        for string_char in _get_row_string_from_csv(index, train_set):
-            if string_char:
-                _chars_row_set.append(float(string_char))
-        faces_128_chars.append(_chars_row_set)
-        del _chars_row_set
+    for index in xrange(len(train_set.values)):
+        faces_128_chars.append(literal_eval(train_set.values[index][0]))
 
     return faces_128_chars
 
 
-def choose_classifier(method_name):
+def _get_face_128_chars_from_csv(csv_path=TRAINING_DATASET_CSV):
+    """
+    Reading csv-file with 128 face characters of users' faces
+    :param csv_path: path to the csv-file
+    :return: faces_128_chars - list of 128 face characters,
+             labels - number labels of user names
+    """
+    training_dataset = pd.read_csv(csv_path)
+    training_dataset.dropna(axis=0,
+                            how='any',
+                            inplace=True)
+
+    labels = training_dataset['user_name_label']
+
+    training_dataset.drop(['user_name_label'],
+                          axis=1,
+                          inplace=True)
+
+    faces_128_chars = _get_list_chars_from_string_csv(training_dataset)
+
+    return faces_128_chars, labels
+
+
+def find_classifier_best_params(method_name):
     """
     :param method_name: name of the chosen classifier to train
     :return: best parameters for training of the chosen classifier
     """
 
-    training_dataset = pd.read_csv(TRAINING_DATASET_CSV)
-    training_dataset.dropna(axis=0, how='any', inplace=True)
-    labels = training_dataset['user_name_label']
-    training_dataset.drop(['user_name_label'],
-                          axis=1,
-                          inplace=True)
-    faces_128_chars = _get_list_chars_from_string_csv(training_dataset)
+    faces_128_chars, labels = _get_face_128_chars_from_csv(csv_path=TRAINING_DATASET_CSV)
     best_classifier = ClassifierSearch(method_name=method_name,
                                        X_dataset=faces_128_chars,
                                        labels=labels)
     best_classifier.dispatch()
     best_classifier.save_classifier()
-    # print(best_classifier.grid_search())
+    classifier_best_params_dict = best_classifier.grid_search()
+    return classifier_best_params_dict
 
 
 class ClassifierSearch(object):
@@ -133,7 +131,8 @@ class ClassifierSearch(object):
                 (might be not the same as working directory)
         """
 
-        with open(CLASSIFIER_PATH, 'w') as clf:
+        classifier_path = CLASSIFIER_PATH.split('.')
+        with open(classifier_path[0] + '_{}'.format(self.classifier.__module__) + classifier_path[1], 'w') as clf:
             pickle.dump((self.label_encoder, self.classifier), clf)
 
     def dispatch(self):
@@ -180,21 +179,21 @@ class ClassifierSearch(object):
         print(self.X_train, self.y_train, self.X_test, self.y_test)
         classifier_grid.fit(self.X_train, self.y_train)
         prediction_accuracy = accuracy_score(self.y_test, classifier_grid.predict(self.X_test)) * 100
-
-        return '''Best parameters for {} classifier are: {}.
+        print('''Best parameters for {} classifier are: {}.
                   Best score on the training data: {} %.
                   Accuracy score on the test data: {} %.'''.format(self.classifier,
                                                                    classifier_grid.best_params_,
                                                                    classifier_grid.best_score_ * 100,
-                                                                   prediction_accuracy)
+                                                                   prediction_accuracy))
+        return classifier_grid.best_params_
 
 
-def _photos_list_object():
+def _photos_list_object(directory=WORKING_DIRECTORY):
     """
     :return: generator-object of users' photos list
     """
 
-    for path, _, file_names in os.walk(WORKING_DIRECTORY):
+    for path, _, file_names in os.walk(directory):
         for file_name in file_names:
             yield os.path.join(path, file_name)
 
@@ -230,9 +229,10 @@ class Classifier(object):
         self.faces_128_chars = _get_users_128_chars()
         self.name_number_labels = self.label_encoder.transform(self.people_name_labels)
 
-    def get_classifier(self):
+    def load_classifier(self):
         """
-        previously trained label encoder and classifier
+        :return: Trained kNN-classifier and label encoder
+
         """
 
         try:
@@ -252,12 +252,22 @@ class Classifier(object):
         training_dataframe = pd.DataFrame.from_dict(users_dict)
         training_dataframe.to_csv(TRAINING_DATASET_CSV, index_label=None, index=None)
 
-    def train(self):
+    def save_classifier(self):
+        """
+        Saves trained classifier and label encoder at exact directory
+                (might be not the same as working directory)
+        """
+
+        classifier_path = CLASSIFIER_PATH.split('.')
+        with open(classifier_path[0] + '_{}'.format(self.classifier.__module__) + classifier_path[1], 'w') as clf:
+            pickle.dump((self.label_encoder, self.classifier), clf)
+
+    def train_classifier(self):
         """
         Saving trained classifier
         """
 
-        self.classifier = SVC(C=0.1, kernel='linear', probability=True)
+        # self.classifier = SVC(C=0.1, kernel='linear', probability=True)
         self.classifier.fit(self.faces_128_chars, self.name_number_labels)
 
     def infer(self, frame):
@@ -278,13 +288,47 @@ class Classifier(object):
 
 
 if __name__ == '__main__':
-    # classifier = Classifier()
-    # classifier.save_training_set_as_csv()
-    # method_name = 'tree'
-    # choose_classifier(method_name)
-    classifier = Classifier()
-    classifier.get_classifier()
-    frames = [cv2.imread('/home/malov/anon5.jpg'), cv2.imread('/home/malov/anon8.jpg'),
-              cv2.imread('/home/malov/anon10.jpg'), cv2.imread('/home/malov/dima.jpg')]
-    for frame in frames:
-        print(classifier.infer(frame))
+    print('label encoder init')
+    people_name_labels = [photo_path.split('/')[4] for photo_path in _photos_list_object()]
+    label_encoder = LabelEncoder().fit(people_name_labels)
+    name_number_labels = label_encoder.transform(people_name_labels)
+
+    print('saving csv')
+    users_dict = {'128_face_chars': _get_users_128_chars(),
+                  'user_name_label': name_number_labels}
+    training_dataframe = pd.DataFrame.from_dict(users_dict)
+    training_dataframe.to_csv(TRAINING_DATASET_CSV, index_label=None, index=None)
+
+    print('reading csv')
+    face_128_chars, labels = _get_face_128_chars_from_csv()
+    print('init classifier')
+    classifier = SVC(kernel='linear',
+                     C=100,
+                     probability=True)
+
+    print('train-test split')
+    X_train, X_test, y_train, y_test = train_test_split(face_128_chars, labels,
+                                                        test_size=0.3,
+                                                        random_state=17)
+    print('classifier train')
+    classifier.fit(X_train, y_train)
+    prediction_accuracy = accuracy_score(y_test, classifier.predict(X_test)) * 100
+    print(prediction_accuracy)
+
+    print('saving classifier')
+
+    with open(CLASSIFIER_PATH, 'w') as clf:
+        pickle.dump((label_encoder, classifier), clf)
+
+    directory = '/home/malov/tests_faces'
+    print('recognition')
+
+    for path in _photos_list_object(directory=directory):
+        print(path)
+        frame = cv2.imread(path)
+        face_128_chars = np.array(get_128_face_chars(frame)).reshape(1, -1)
+        predictions = classifier.predict_proba(face_128_chars).ravel()
+        max_prob = np.argmax(predictions)
+        person_name = label_encoder.inverse_transform(max_prob)
+        confidence = predictions[max_prob]
+        print(person_name, confidence)

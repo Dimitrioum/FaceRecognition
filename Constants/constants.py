@@ -5,8 +5,9 @@ import numpy as np
 WORKING_DIRECTORY           = '/home/malov/users/'
 FACE_SHAPE_PREDICT_MODEL    = '/home/malov/PycharmProjects/object_detection/shape_predictor_68_face_landmarks.dat'
 FACE_128_CHARS_MODEL        = '/home/malov/PycharmProjects/object_detection/dlib_face_recognition_resnet_model_v1.dat'
-CLASSIFIER_PATH             = '/home/malov/classifier.pkl'
-TRAINING_DATASET_CSV       = '/home/malov/PycharmProjects/FaceRecognition/training_set.csv'
+CLASSIFIER_PATH             = '/home/malov/PycharmProjects/FaceRecognition/SVC_best_params_classifier_prob.pkl'
+TRAINING_DATASET_CSV        = '/home/malov/PycharmProjects/FaceRecognition/training_set.csv'
+# FACE_3D_MODEL               = '/home/malov/PycharmProjects/FaceRecognition/'
 
 INNER_EYES_AND_BOTTOM_LIP   = [39, 42, 57]
 OUTER_EYES_AND_NOSE         = [36, 45, 33]

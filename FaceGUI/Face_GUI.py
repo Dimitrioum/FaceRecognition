@@ -77,7 +77,7 @@ class UserGUI:
         person_name = raw_input('Введите ФИО в формате:  \'familiya-imya\'\n')
         self.make_user_profile(person_name)
         add_user = Classifier()
-        add_user.train()
+        add_user.train_classifier()
         print('Пользователь успешно добавлен')
 
     def show_frame(self):

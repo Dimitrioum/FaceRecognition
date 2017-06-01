@@ -61,7 +61,7 @@ def get_128_face_chars(frame):
     """
 
     try:
-        for index, face_rectangle in get_face_detection(frame):
+        for _, face_rectangle in get_face_detection(frame):
             face_shape = FACE_SHAPE_PREDICT(_get_aligned_frame(frame), face_rectangle)
             face_128_chars = FACE_128_CHARS_RECOGNIZE.compute_face_descriptor(_get_aligned_frame(frame),
                                                                               face_shape)

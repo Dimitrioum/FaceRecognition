@@ -151,7 +151,7 @@ class ControlWindow(QWidget):
         make_user_profile(self.person_name)
         if not self.capture:
             self.capture = QtCapture(0)
-            self.capture.user_classifier.train()
+            self.capture.user_classifier.train_classifier()
             # print(self.capture.user_classifier.classifier, self.capture.user_classifier.label_encoder)
             print 'Пользователь успешно добавлен'
 
